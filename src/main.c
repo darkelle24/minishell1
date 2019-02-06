@@ -88,7 +88,81 @@ toolbox_t *prep_toolbox(char **env)
         exit(84);
     toolbox->env = clone_env(env);
     toolbox->oldpwd = NULL;
+    toolbox->agcv = NULL;
     return (toolbox);
+}
+
+void free_agcv(toolbox_t *toolbox)
+{
+    int count = 0;
+
+    if (toolbox->agcv != NULL) {
+        while (toolbox->agcv[count] != NULL) {
+            free(toolbox->agcv[count]);
+            count++;
+        }
+        free(toolbox->agcv);
+    }
+    toolbox->agcv = NULL;
+}
+
+int seperate_argument_3(char *str, toolbox_t *toolbox, int *count, int place)
+{
+    int count2 = *count;
+    int lenght = 0;
+
+    while (str[count2] != ' ' && str[count2] != '\t'
+    && str[count2] != '\n') {
+        lenght++;
+        count2++;
+    }
+    toolbox->agcv[place] = malloc(sizeof(char) * lenght + 1);
+    if (toolbox->agcv[place] == NULL)
+        exit(84);
+    toolbox->agcv[place][lenght] = '\0';
+    count2 = 0;
+    while (str[*count] != ' ' && str[*count] != '\t'
+    && str[*count] != '\n') {
+        toolbox->agcv[place][count2] = str[*count];
+        *count = *count + 1;
+        count2++;
+    }
+    return (place + 1);
+}
+
+void seperate_argument_2(char *str, toolbox_t *toolbox)
+{
+    int count = 0;
+    int place = 0;
+
+    toolbox->agcv = malloc(sizeof(char *) * (toolbox->nbrarg + 1));
+    if (toolbox->agcv == NULL)
+        exit(84);
+    toolbox->agcv[toolbox->nbrarg] = NULL;
+    while (str[count] != '\n') {
+        if (str[count] != ' ' && str[count] != '\t')
+            place = seperate_argument_3(str, toolbox, &count, place);
+        count++;
+    }
+}
+
+void seperate_argument(char *str, toolbox_t *toolbox)
+{
+    int count = 0;
+
+    toolbox->nbrarg = 0;
+    free_agcv(toolbox);
+    while (str[count] != '\n') {
+        if (str[count] != ' ' && str[count] != '\t') {
+            toolbox->nbrarg = toolbox->nbrarg + 1;
+            while (str[count] != ' ' && str[count] != '\t'
+            && str[count] != '\n')
+                count++;
+        }
+        count++;
+    }
+    if (toolbox->nbrarg != 0)
+        seperate_argument_2(str, toolbox);
 }
 
 int main(int ac, char **av, char **env)
