@@ -1,8 +1,8 @@
 /*
 ** EPITECH PROJECT, 2019
-** dq
+** qd
 ** File description:
-** qdq
+** qd
 */
 
 #include <unistd.h>
@@ -16,11 +16,14 @@
 #include "../include/struct.h"
 #include "../include/proto.h"
 
-int my_strlen(char const *str)
+int fcfind(toolbox_t *toolbox, char const *commande)
 {
-    int nbchar = 0;
+    int count = 0;
 
-    while (str != NULL && str[nbchar] != '\0')
-        nbchar++;
-    return (nbchar);
+    while (commande[count] != '\0') {
+        if (commande[count] != toolbox->agcv[0][count])
+            return (0);
+        count++;
+    }
+    return (1);
 }

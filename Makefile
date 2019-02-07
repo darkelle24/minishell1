@@ -10,6 +10,7 @@ CC	=	gcc
 SRC	=	src/main.c					\
 		src/my_strcmp.c				\
 		src/create_env.c 			\
+		src/fcfind.c				\
 		src/my_strlen.c
 
 OBJ	=	$(SRC:.c=.o)
