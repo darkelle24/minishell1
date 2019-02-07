@@ -192,7 +192,6 @@ void cd_add(toolbox_t *toolbox, char *dest)
 
     if (chdir(dest) == -1) {
         my_perror(dest, errno);
-        free(dest);
     } else {
         dest = NULL;
         dest = getcwd(dest, 0);
