@@ -51,6 +51,7 @@ char **create_new_env_2(char **env, char *envadd, int size)
     }
     new_env[count] = envadd;
     new_env[count + 1] = NULL;
+    free(env);
     return (new_env);
 }
 
@@ -68,7 +69,9 @@ char **create_new_env(char **env, char *name, char *value)
     init_str_env(name, value, envadd);
     if (env == NULL || env[count] == NULL) {
         return (create_new_env_2(env, envadd, count));
-    } else
+    } else {
+        free(env[count]);
         env[count] = envadd;
+    }
     return (env);
 }
