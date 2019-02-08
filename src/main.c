@@ -150,7 +150,7 @@ void seperate_argument_2(char *str, toolbox_t *toolbox)
         exit(84);
     toolbox->agcv[toolbox->nbrarg] = NULL;
     while (str[count] != '\0') {
-        if (str[count] != ' ' && str[count] != '\t')
+        if (str[count] != ' ' && str[count] != '\t' && str[count] != '\n')
             place = seperate_argument_3(str, toolbox, &count, place);
         count++;
     }
@@ -424,9 +424,168 @@ void fc_exit(toolbox_t *toolbox)
     exit(0);
 }
 
+int test_bin(char **arg)
+{
+    int count = 1;
+
+    while (arg[0][count] != '\0') {
+        if (arg[0][count - 1] == '.' && arg[0][count] == '/')
+            return (1);
+        count++;
+    }
+    return (0);
+}
+
+void error_write_exe(char **arg)
+{
+    if (errno != ENOENT) {
+        my_perror(arg[0], errno);
+    } else {
+        write(2, arg[0], my_strlen(arg[0]));
+        write(2, ": Command not found.\n", 21);
+    }
+}
+
+char **check_path(char **env)
+{
+    int count = 0;
+
+    while (my_strcmp(env[count], "PATH") != 0 && env[count] != NULL)
+        count++;
+    if (env[count] == NULL)
+        env = create_new_env(env, "PATH", "/bin/");
+    else if (env[count][5] != '/')
+        env = create_new_env(env, "PATH", "/bin/");
+    return (env);
+}
+
+char *recup(char *env, int count, char *str)
+{
+    int count2 = 0;
+    if (env[count] == ':')
+        count++;
+    while (env[count] != '\0' && env[count] != ':') {
+        str[count2] = env[count];
+        count2++;
+        count++;
+    }
+    str[count2] = '\0';
+    return (str);
+}
+
+char *test_if_binnat_2(char *env, char **arg, int count_word, int count2)
+{
+    char *str = malloc(sizeof(char) * count_word + my_strlen(arg[0]) + 2);
+
+    if (str == NULL)
+        exit(84);
+    str = recup(env, count2 - count_word, str);
+    str = my_strcatspe(str, arg[0]);
+    return (str);
+}
+
+char *test_if_binnat(char **arg, char **env)
+{
+    int count = 0;
+    int count2 = 5;
+    int count_word = 0;
+    char *str;
+
+    while (my_strcmp(env[count], "PATH") != 0)
+        count++;
+    while (env[count][count2 - 1] != '\0') {
+        if (env[count][count2] == ':' || env[count][count2] == '\0') {
+            str = test_if_binnat_2(env[count], arg, count_word, count2);
+            count_word = 0;
+            if (access(str, F_OK | X_OK) != -1) {
+                return (str);
+            } else
+                free(str);
+        }
+        count_word++;
+        count2++;
+    }
+    return (NULL);
+}
+
+int error_check_and_binarie(char **arg, char **env)
+{
+    char *realbinaire;
+
+    if (test_bin(arg) == 1) {
+        if (access(arg[0], F_OK | X_OK) == -1) {
+            error_write_exe(arg);
+            return (84);
+        }
+    } else {
+        env = check_path(env);
+        realbinaire = test_if_binnat(arg, env);
+        if (realbinaire == NULL) {
+            error_write_exe(arg);
+            return (84);
+        } else
+            arg[0] = realbinaire;
+    }
+    return (0);
+}
+
+void part_for_child_process(char **arg, char **env)
+{
+    if (execve(arg[0], arg, env) == -1)
+        perror(NULL);
+    wait(NULL);
+}
+
+void print_segfault(int sig)
+{
+    write(2, strsignal(sig), my_strlen(strsignal(sig)));
+    write(2, "\n", 1);
+}
+
+int part_for_parent_process(char **arg, char **env, pid_t pid)
+{
+    int block = 0;
+    int status = 0;
+
+    while ((!WIFEXITED(status) && !WIFSIGNALED(status)) || block == 0) {
+        pid_t w = waitpid(pid, &status, WUNTRACED);
+        if (w == -1) {
+            perror(NULL);
+            return (0);
+        }
+        if (WIFEXITED(status)) {
+            return (0);
+        } else if (WIFSIGNALED(status)) {
+            if (WTERMSIG(status) == SIGSEGV)
+                print_segfault(SIGSEGV);
+            return (0);
+        }
+        block = 1;
+    }
+    return (0);
+}
+
+int forkfc(char **arg, char **env)
+{
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror(NULL);
+        return (84);
+    }
+    if (pid == 0) {
+        part_for_child_process(arg, env);
+    } else {
+        part_for_parent_process(arg, env, pid);
+    }
+    return (0);
+}
+
 void fc_other(toolbox_t *toolbox)
 {
-
+    if (error_check_and_binarie(toolbox->agcv, toolbox->env) == 84)
+        return;
+    forkfc(toolbox->agcv, toolbox->env);
 }
 
 void test_command(toolbox_t *toolbox)
